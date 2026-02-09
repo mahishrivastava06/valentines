@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valentine for Om 💘</title>
+  <style>
+    :root{
+      --bg1:#ff4d6d;
+      --bg2:#ff8fab;
+      --card:#ffffffcc;
+      --text:#2b2b2b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      display: grid;
+      place-items: center;
+      color: var(--text);
+      overflow: hidden;
+      background: radial-gradient(1200px 800px at 20% 20%, #ffd1dc 0%, transparent 55%),
+                  radial-gradient(900px 700px at 80% 30%, #ffc2d1 0%, transparent 55%),
+                  linear-gradient(135deg, var(--bg1), var(--bg2));
+    }
+
+    /* subtle pattern */
+    body::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 10px 10px, rgba(255,255,255,.18) 2px, transparent 3px) 0 0/28px 28px;
+      opacity:.35;
+      pointer-events:none;
+    }
+
+    .card{
+      width: min(680px, 92vw);
+      padding: 36px 28px;
+      border-radius: 24px;
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 60px rgba(0,0,0,.18);
+      position: relative;
+      z-index: 2;
+      text-align: center;
+    }
+
+    h1{
+      margin: 0 0 10px 0;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: -0.02em;
+    }
+
+    .sub{
+      margin: 0 0 24px 0;
+      font-size: 16px;
+      opacity: .85;
+    }
+
+    .buttons{
+      margin-top: 22px;
+      position: relative;
+      height: 90px; /* space to dodge */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    button{
+      border: 0;
+      cursor: pointer;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 16px 26px;
+      transition: transform .12s ease, box-shadow .12s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #yesBtn{
+      font-size: 22px;
+      padding: 18px 34px;
+      background: linear-gradient(180deg, #34d399, #10b981);
+      color: white;
+      box-shadow: 0 10px 22px rgba(16,185,129,.35);
+    }
+    #yesBtn:hover{ transform: translateY(-2px) scale(1.02); }
+    #yesBtn:active{ transform: translateY(0px) scale(.98); }
+
+    /* The "No" is intentionally unclickable */
+    #noBtn{
+      font-size: 18px;
+      background: linear-gradient(180deg, #ff7aa2, #ff4d6d);
+      color: white;
+      box-shadow: 0 10px 22px rgba(255,77,109,.28);
+      position: relative;
+      /* not clickable */
+      pointer-events: none;
+      opacity: .95;
+    }
+
+    .hint{
+      margin-top: 14px;
+      min-height: 26px;
+      font-weight: 700;
+      color: rgba(0,0,0,.70);
+    }
+
+    .success{
+      display:none;
+      margin-top: 18px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    /* Hearts floating */
+    .heart{
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      transform: rotate(45deg);
+      opacity: .9;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.12));
+      z-index: 1;
+      animation: floatUp linear forwards;
+    }
+    .heart::before,
+    .heart::after{
+      content:"";
+      position:absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: inherit;
+    }
+    .heart::before{ left:-8px; top:0; }
+    .heart::after{ left:0; top:-8px; }
+
+    @keyframes floatUp{
+      from { transform: translateY(0) rotate(45deg) scale(1); opacity: .9; }
+      to   { transform: translateY(-110vh) rotate(45deg) scale(1.3); opacity: 0; }
+    }
+
+    .mini{
+      font-size: 13px;
+      opacity: .75;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Will you be my valentine, Om? 💖</h1>
+    <p class="sub">Choose wisely 😌</p>
+
+    <div class="buttons" id="btnArea">
+      <button id="yesBtn">YES 💘</button>
+      <button id="noBtn" aria-disabled="true">NO 🙈</button>
+    </div>
+
+    <div class="hint" id="hint"></div>
+    <div class="success" id="success">
+      YAYYY!! 💞💞💞 <br/>
+      <span class="mini">Screenshot this and send it to Om 😌</span>
+    </div>
+  </div>
+
+  <script>
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn  = document.getElementById("noBtn");
+    const btnArea = document.getElementById("btnArea");
+    const hint = document.getElementById("hint");
+    const success = document.getElementById("success");
+
+    // 3 dodges, with fun messages
+    const dodgeLines = [
+      "It's too fast 😭",
+      "No is shy 🙈",
+      "No is running away again 🏃‍♂️💨"
+    ];
+    let dodges = 0;
+
+    // Because NO has pointer-events none (unclickable),
+    // we attach the "try to click no" behavior to the area around it:
+    // if user taps near where NO is, we move it.
+    function nearNo(x, y) {
+      const r = noBtn.getBoundingClientRect();
+      const pad = 28; // how close counts as "trying"
+      return (
+        x >= r.left - pad &&
+        x <= r.right + pad &&
+        y >= r.top - pad &&
+        y <= r.bottom + pad
+      );
+    }
+
+    function moveNoButton() {
+      if (dodges < 3) {
+        hint.textContent = dodgeLines[dodges] || "Nope 😌";
+        dodges += 1;
+
+        // random move within the buttons area
+        const area = btnArea.getBoundingClientRect();
+
+        // make NO absolutely positioned relative to btnArea after first move
+        if (getComputedStyle(noBtn).position !== "absolute") {
+          noBtn.style.position = "absolute";
+        }
+
+        const maxX = Math.max(0, area.width - noBtn.offsetWidth);
+        const maxY = Math.max(0, area.height - noBtn.offsetHeight);
+
+        // keep it from overlapping YES too aggressively
+        let x = Math.random() * maxX;
+        let y = Math.random() * maxY;
+
+        noBtn.style.left = x + "px";
+        noBtn.style.top  = y + "px";
+      } else {
+        hint.textContent = "Okay okay… NO is officially unavailable. Try YES 😌💚";
+      }
+    }
+
+    // Trigger dodge on hover/mouse move near NO
+    window.addEventListener("mousemove", (e) => {
+      if (nearNo(e.clientX, e.clientY)) moveNoButton();
+    }, { passive: true });
+
+    // Trigger dodge on touch near NO
+    window.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      if (t && nearNo(t.clientX, t.clientY)) moveNoButton();
+    }, { passive: true });
+
+    // YES click = win
+    yesBtn.addEventListener("click", () => {
+      hint.textContent = "Best choice ever 😤💖";
+      success.style.display = "block";
+      burstHearts();
+    });
+
+    // Floating hearts background
+    function spawnHeart() {
+      const heart = document.createElement("div");
+      heart.className = "heart";
+      const size = 10 + Math.random() * 18;
+      heart.style.width = size + "px";
+      heart.style.height = size + "px";
+      heart.style.left = (Math.random() * 100) + "vw";
+      heart.style.bottom = (-20 - Math.random() * 40) + "px";
+      const dur = 5 + Math.random() * 5;
+      heart.style.animationDuration = dur + "s";
+
+      // random pink/red shade
+      const colors = ["#ff4d6d", "#ff758f", "#ff8fab", "#ffb3c6", "#ffccd5"];
+      heart.style.background = colors[Math.floor(Math.random() * colors.length)];
+
+      document.body.appendChild(heart);
+      setTimeout(() => heart.remove(), dur * 1000);
+    }
+    setInterval(spawnHeart, 350);
+
+    function burstHearts() {
+      for (let i = 0; i < 18; i++) {
+        setTimeout(spawnHeart, i * 60);
+      }
+    }
+  </script>
+</body>
+</html>
